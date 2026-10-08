@@ -1,6 +1,10 @@
-# HMusic V6 — morceau en lecture surligné + glisser-déposer
+# HMusic V7 — cliquer le titre pour lire + surbrillance + glisser-déposer
 
 Cette version reprend **HMusic V4** (importation MP3 PC/iPhone, stockage local, favoris, lecture) et conserve le **tri manuel persistant** des musiques. La musique sélectionnée est maintenant **surlignée en vert** dans la bibliothèque, avec un mini-égaliseur animé lorsqu’elle joue et « EN PAUSE » si elle est arrêtée temporairement. La surbrillance suit les boutons précédent/suivant et le changement automatique de piste.
+
+## Lire une musique depuis son titre
+
+Cliquez ou touchez le **titre (ou le nom de l’artiste)** d’un morceau pour le lancer immédiatement. Si le morceau est déjà en pause, le même geste reprend la lecture. Accessible aussi au clavier avec Entrée ou Espace.
 
 ## Déplacer une musique
 

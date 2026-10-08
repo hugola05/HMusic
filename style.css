@@ -44,3 +44,8 @@ body.draggingSong{user-select:none;-webkit-user-select:none}
 .song.isPlaying .equalizer i:nth-child(3){animation-delay:.47s}
 @keyframes hmusicEqualizer{from{height:3px}to{height:12px}}
 @media(prefers-reduced-motion:reduce){.song.isPlaying .equalizer i{animation:none;height:9px}}
+
+/* V7 : le titre et l'artiste sont des surfaces de lecture cliquables. */
+.songInfo[role="button"]{cursor:pointer;border-radius:6px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(216,255,114,.17)}
+.songInfo[role="button"]:hover .title{text-decoration:underline;text-underline-offset:3px}
+.songInfo[role="button"]:focus-visible{outline:2px solid #d8ff72;outline-offset:4px}

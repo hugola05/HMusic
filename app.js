@@ -1,5 +1,5 @@
 "use strict";
-// HMusic V6 — V5 + mise en évidence du morceau en cours de lecture.
+// HMusic V7 — toucher ou cliquer le titre lance le morceau.
 const DB_NAME = "HMusicDB";
 const STORE = "songs";
 const AUDIO_STORE = "audioData";
@@ -130,6 +130,24 @@ function render() {
     row.className = "song";
     row.dataset.songId = String(s.id);
     row.innerHTML = `<div class="thumb">♫</div><div class="songInfo"><div class="title">${esc(s.title)}</div><div class="artist">${esc(s.artist||"Artiste inconnu")}</div><div class="listeningStatus" aria-hidden="true"><span class="equalizer"><i></i><i></i><i></i></span><span class="listeningText">EN LECTURE</span></div></div><div class="songActions"><button aria-label="Favori">${s.favorite?"♥":"♡"}</button><button aria-label="Lire">▶</button><button aria-label="Supprimer">⋯</button></div>${reorderEnabled?`<button class="dragHandle" type="button" aria-label="Déplacer ${esc(s.title)}. Maintiens appuyé puis fais glisser" title="Maintenir pour déplacer">☰</button>`:""}`;
+    // Titre accessible au clavier et au toucher : lance la piste sans mettre en pause.
+    const songInfo = row.querySelector(".songInfo");
+    songInfo.setAttribute("role", "button");
+    songInfo.setAttribute("tabindex", "0");
+    songInfo.setAttribute("aria-label", `Écouter ${s.title}`);
+    function startFromTitle() {
+      if (dragging) return;
+      if (songs[currentIndex]?.id === s.id) {
+        if (audio.paused) audio.play().catch(e => setStatus("Lecture impossible : " + formatError(e), "error"));
+      } else void playSong(s.id);
+    }
+    songInfo.addEventListener("click", startFromTitle);
+    songInfo.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        startFromTitle();
+      }
+    });
     const btns = row.querySelectorAll("button");
     btns[0].onclick = async () => {
       try { s.favorite = !s.favorite; await updateSong(s); render(); updatePlayer(); }
@@ -452,5 +470,5 @@ const ready=(async()=>{
   catch(e) {console.error("HMusic database error",e);setStatus("Stockage indisponible : "+formatError(e),"error");throw e;}
 })();
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=6", {updateViaCache:"none"}).catch(e=>console.warn("HMusic offline",e)));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=7", {updateViaCache:"none"}).catch(e=>console.warn("HMusic offline",e)));
 }

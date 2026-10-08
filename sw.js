@@ -1,6 +1,6 @@
-// HMusic V6 — les anciens caches doivent être supprimés après une mise à jour.
-const CACHE = "hmusic-v6-sortable";
-const STATIC = ["./index.html?v=5", "./style.css?v=5", "./app.js?v=5", "./manifest.json?v=5"];
+// HMusic V7 — les anciens caches doivent être supprimés après une mise à jour.
+const CACHE = "hmusic-v7-click-title";
+const STATIC = ["./index.html?v=7", "./style.css?v=7", "./app.js?v=7", "./manifest.json?v=7"];
 self.addEventListener("install", event => {
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE);
@@ -30,7 +30,7 @@ self.addEventListener("fetch", event=>{
     } catch(e) {
       const saved=await cache.match(req);
       if(saved) return saved;
-      if(req.mode==="navigate") return await cache.match("./index.html?v=5") || Response.error();
+      if(req.mode==="navigate") return await cache.match("./index.html?v=7") || Response.error();
       return Response.error();
     }
   })());
