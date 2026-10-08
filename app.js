@@ -1,5 +1,5 @@
 "use strict";
-// HMusic v4 — imports robustes iOS/PC + stockage audio séparé.
+// HMusic V5 — réorganisation par appui long et stockage local persistant.
 const DB_NAME = "HMusicDB";
 const STORE = "songs";
 const AUDIO_STORE = "audioData";
@@ -10,6 +10,7 @@ let currentIndex = -1;
 let shuffle = false, repeat = false, activeFilter = "all";
 let objectUrl = null;
 let importing = false;
+let dragging = false;
 const $ = id => document.getElementById(id);
 const audio = $("audio"), library = $("library"), empty = $("empty"), player = $("player"), search = $("search");
 
@@ -52,7 +53,7 @@ function openDB() {
 }
 function allSongs() {
   return requestResult(db.transaction(STORE, "readonly").objectStore(STORE).getAll())
-    .then(rows => rows.sort((a,b) => (a.added || 0) - (b.added || 0)));
+    .then(rows => rows.sort((a,b) => songOrder(a) - songOrder(b) || a.id - b.id));
 }
 function saveNewSong(meta, buffer) {
   // Une seule transaction : la piste et son contenu audio sont sauvegardés ensemble.
@@ -106,6 +107,7 @@ function readFile(file) {
     reader.readAsArrayBuffer(file);
   });
 }
+function songOrder(s) { return Number.isFinite(s.order) ? s.order : (s.added || 0); }
 function cleanName(name) { return name.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim() || "Musique"; }
 function formatTime(value) {
   if (!Number.isFinite(value)) return "0:00";
@@ -115,6 +117,8 @@ function formatTime(value) {
 function esc(v) { return String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function isAudio(file) { return /\.(mp3|m4a|aac|wav|flac|aiff|aif|ogg|opus|mp4)$/i.test(file.name) || file.type.startsWith("audio/"); }
 function render() {
+  const reorderEnabled = activeFilter === "all" && !search.value.trim();
+  $("reorderHint").hidden = !reorderEnabled || !songs.length;
   const q = search.value.trim().toLowerCase();
   const filtered = songs.filter(s => (activeFilter === "all" || s.favorite) &&
     [s.title,s.artist,s.album].join(" ").toLowerCase().includes(q));
@@ -124,7 +128,8 @@ function render() {
   for (const s of filtered) {
     const row = document.createElement("div");
     row.className = "song";
-    row.innerHTML = `<div class="thumb">♫</div><div class="songInfo"><div class="title">${esc(s.title)}</div><div class="artist">${esc(s.artist||"Artiste inconnu")}</div></div><div class="songActions"><button aria-label="Favori">${s.favorite?"♥":"♡"}</button><button aria-label="Lire">▶</button><button aria-label="Supprimer">⋯</button></div>`;
+    row.dataset.songId = String(s.id);
+    row.innerHTML = `<div class="thumb">♫</div><div class="songInfo"><div class="title">${esc(s.title)}</div><div class="artist">${esc(s.artist||"Artiste inconnu")}</div></div><div class="songActions"><button aria-label="Favori">${s.favorite?"♥":"♡"}</button><button aria-label="Lire">▶</button><button aria-label="Supprimer">⋯</button></div>${reorderEnabled?`<button class="dragHandle" type="button" aria-label="Déplacer ${esc(s.title)}. Maintiens appuyé puis fais glisser" title="Maintenir pour déplacer">☰</button>`:""}`;
     const btns = row.querySelectorAll("button");
     btns[0].onclick = async () => {
       try { s.favorite = !s.favorite; await updateSong(s); render(); updatePlayer(); }
@@ -141,9 +146,116 @@ function render() {
         render();
       } catch(e) { setStatus("Suppression impossible : " + formatError(e),"error"); }
     };
+    if (reorderEnabled) enableLongPressReorder(row);
     library.appendChild(row);
   }
 }
+
+// Enregistre l’ordre en une seule transaction pour conserver la bibliothèque intacte.
+function saveSongOrder(orderedSongs) {
+  return new Promise((resolve, reject) => {
+    let tr;
+    try { tr = db.transaction(STORE, "readwrite"); }
+    catch(e) { reject(e); return; }
+    const store = tr.objectStore(STORE);
+    orderedSongs.forEach((song, i) => store.put({ ...song, order:i }));
+    tr.oncomplete = () => resolve();
+    tr.onerror = () => reject(tr.error || new Error("Ordre non enregistré"));
+    tr.onabort = () => reject(tr.error || new Error("Ordre non enregistré"));
+  });
+}
+
+async function applyReorder() {
+  const ids = Array.from(library.querySelectorAll(".song"), el => Number(el.dataset.songId));
+  if (ids.length !== songs.length) return;
+  const before = songs.map(song => song.id);
+  if (ids.every((id,i) => id === before[i])) return;
+  const playingId = songs[currentIndex]?.id;
+  const byId = new Map(songs.map(song=>[song.id, song]));
+  const reordered = ids.map(id=>byId.get(id));
+  if (reordered.some(song=>!song)) { render(); return; }
+  try {
+    await saveSongOrder(reordered);
+    songs = reordered.map((song,i)=>({ ...song, order:i }));
+    currentIndex = playingId === undefined ? -1 : songs.findIndex(song=>song.id === playingId);
+    updatePlayer();
+    render();
+    setStatus("✓ Nouvel ordre des morceaux enregistré !", "success");
+  } catch(e) {
+    setStatus("Impossible de sauvegarder l’ordre : " + formatError(e), "error");
+    try { songs = await allSongs(); } catch(_) {}
+    currentIndex = playingId === undefined ? -1 : songs.findIndex(song=>song.id === playingId);
+    render();
+  }
+}
+
+// Pointer Events fonctionnent pour la souris et pour le toucher (iOS / Android).
+// La poignée évite de bloquer le défilement tactile normal de la liste.
+function enableLongPressReorder(row) {
+  const handle = row.querySelector(".dragHandle");
+  if (!handle) return;
+  let startX=0, startY=0, pointerId=null, timer=null, active=false;
+  const clearTimer=()=>{ if(timer !== null) { clearTimeout(timer); timer=null; } };
+  function reset() {
+    clearTimer();
+    active=false;
+    dragging=false;
+    row.classList.remove("dragging");
+    library.classList.remove("reordering");
+    document.body.classList.remove("draggingSong");
+    pointerId=null;
+    document.removeEventListener("pointermove", onPointerMove);
+    document.removeEventListener("pointerup", onPointerUp);
+    document.removeEventListener("pointercancel", onPointerCancel);
+  }
+  handle.addEventListener("pointerdown", event=>{
+    if (dragging || importing || event.button !== 0 && event.pointerType === "mouse") return;
+    event.preventDefault();
+    startX=event.clientX; startY=event.clientY;
+    pointerId=event.pointerId;
+    document.addEventListener("pointermove", onPointerMove, {passive:false});
+    document.addEventListener("pointerup", onPointerUp);
+    document.addEventListener("pointercancel", onPointerCancel);
+    try { handle.setPointerCapture(pointerId); } catch(_) {}
+    timer=setTimeout(()=>{
+      active=true; dragging=true;
+      row.classList.add("dragging");
+      library.classList.add("reordering");
+      document.body.classList.add("draggingSong");
+      if(navigator.vibrate) navigator.vibrate(15);
+    }, 260);
+  });
+  function onPointerMove(event) {
+    if(event.pointerId !== pointerId) return;
+    if (!active) {
+      if(Math.hypot(event.clientX-startX,event.clientY-startY)>12) clearTimer();
+      return;
+    }
+    event.preventDefault();
+    // Défilement quand le doigt s’approche d’un bord de l’écran.
+    if (event.clientY < 85) window.scrollBy(0,-16);
+    else if (event.clientY > window.innerHeight - 105) window.scrollBy(0,16);
+    const target=document.elementFromPoint(event.clientX,event.clientY)?.closest(".song");
+    if (!target || target===row || target.parentElement!==library) return;
+    const box=target.getBoundingClientRect();
+    library.insertBefore(row, event.clientY < box.top + box.height/2 ? target : target.nextSibling);
+  }
+  function onPointerUp(event) {
+    if(event.pointerId !== pointerId) return;
+    const moved=active;
+    reset();
+    if (moved) void applyReorder();
+  }
+  function onPointerCancel(event) {
+    if(event.pointerId !== pointerId) return;
+    const moved=active;
+    reset();
+    if(moved) render();
+  }
+  handle.addEventListener("contextmenu", event=>event.preventDefault());
+  handle.addEventListener("click", event=>event.preventDefault());
+}
+
 async function importFiles(fileList) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
@@ -161,7 +273,7 @@ async function importFiles(fileList) {
       try {
         if (!f.size) throw new Error("Le fichier est vide ou indisponible.");
         const bytes = await readFile(f);
-        await saveNewSong({ title:cleanName(f.name), artist:"Artiste inconnu", album:"", type:f.type || inferMime(f.name), added:Date.now()+i, favorite:false, size:f.size }, bytes);
+        await saveNewSong({ title:cleanName(f.name), artist:"Artiste inconnu", album:"", type:f.type || inferMime(f.name), added:Date.now()+i, favorite:false, size:f.size, order:Math.max(0,...songs.map(songOrder))+1 }, bytes);
         ok++;
         // Chaque succès s’affiche immédiatement, sans attendre le lot complet.
         songs = await allSongs();
@@ -310,5 +422,5 @@ const ready=(async()=>{
   catch(e) {console.error("HMusic database error",e);setStatus("Stockage indisponible : "+formatError(e),"error");throw e;}
 })();
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=4", {updateViaCache:"none"}).catch(e=>console.warn("HMusic offline",e)));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=5", {updateViaCache:"none"}).catch(e=>console.warn("HMusic offline",e)));
 }

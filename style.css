@@ -18,3 +18,13 @@ main{padding:0 17px 220px}.hero{display:flex;align-items:end;gap:18px;padding:30
 .importStatus[hidden]{display:none !important}
 .trackCount{color:#909b90;font-size:12px;margin:6px 2px 8px}
 button:disabled{opacity:.45;cursor:wait}
+
+/* HMusic V5 : tri manuel compatible souris et écran tactile */
+.reorderHint{color:#9ca69c;font-size:12px;line-height:1.4;margin:2px 2px 13px}
+.reorderHint[hidden]{display:none !important}
+.dragHandle{flex:none;display:flex;align-items:center;justify-content:center;width:39px;min-height:52px;border:0;border-radius:9px;background:#202420;color:#bdc7bd;font-size:19px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.dragHandle:active{transform:none}
+.song.dragging{background:#2b3b2e;outline:2px solid #d8ff72;box-shadow:0 8px 24px #0009;z-index:3;position:relative}
+.song.dragging .dragHandle{color:#d8ff72;cursor:grabbing}
+.songs.reordering .song:not(.dragging){transition:background .12s}
+body.draggingSong{user-select:none;-webkit-user-select:none}
