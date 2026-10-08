@@ -1,10 +1,37 @@
-const CACHE="hmusic-v3-mp3-fix";
-const ASSETS=["./","./index.html","./style.css","./app.js","./manifest.json"];
-self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));
-self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
-self.addEventListener("fetch",e=>{
-  if(e.request.method!=="GET") return;
-  e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{
-    const copy=res.clone(); caches.open(CACHE).then(c=>c.put(e.request,copy)); return res;
-  }).catch(()=>caches.match("./index.html"))));
+// HMusic V4 — les anciens caches doivent être supprimés après une mise à jour.
+const CACHE = "hmusic-v4-import-fixed";
+const STATIC = ["./index.html?v=4", "./style.css?v=4", "./app.js?v=4", "./manifest.json?v=4"];
+self.addEventListener("install", event => {
+  event.waitUntil((async()=>{
+    const cache=await caches.open(CACHE);
+    await cache.addAll(STATIC);
+    await self.skipWaiting();
+  })());
+});
+self.addEventListener("activate",event=>{
+  event.waitUntil((async()=>{
+    const names=await caches.keys();
+    await Promise.all(names.filter(n=>n.startsWith("hmusic-") && n!==CACHE).map(n=>caches.delete(n)));
+    await self.clients.claim();
+  })());
+});
+self.addEventListener("fetch", event=>{
+  const req=event.request;
+  if(req.method!=="GET" || new URL(req.url).origin !== self.location.origin) return;
+  // Réseau d’abord : une nouvelle publication sur GitHub Pages reste récupérable.
+  event.respondWith((async()=>{
+    const cache=await caches.open(CACHE);
+    try {
+      const fresh=await fetch(req);
+      if(fresh.ok && (req.mode==="navigate" || /\.(?:js|css|html|json)(?:\?|$)/.test(new URL(req.url).pathname))) {
+        await cache.put(req,fresh.clone());
+      }
+      return fresh;
+    } catch(e) {
+      const saved=await cache.match(req);
+      if(saved) return saved;
+      if(req.mode==="navigate") return await cache.match("./index.html?v=4") || Response.error();
+      return Response.error();
+    }
+  })());
 });
