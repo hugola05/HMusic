@@ -28,3 +28,19 @@ button:disabled{opacity:.45;cursor:wait}
 .song.dragging .dragHandle{color:#d8ff72;cursor:grabbing}
 .songs.reordering .song:not(.dragging){transition:background .12s}
 body.draggingSong{user-select:none;-webkit-user-select:none}
+
+/* V6 : met en évidence la musique sélectionnée et animée pendant la lecture. */
+.song.currentSong{background:linear-gradient(90deg,rgba(216,255,114,.16),rgba(35,63,39,.24));border:1px solid rgba(216,255,114,.48);padding:7px;box-shadow:inset 3px 0 0 #d8ff72}
+.song.currentSong .title{color:#d8ff72}
+.song.currentSong .thumb{background:linear-gradient(145deg,#d8ff72,#55733b);color:#101b12}
+.song.currentSong .songActions button[aria-label="Mettre en pause"]{color:#d8ff72}
+.listeningStatus{display:none;align-items:center;gap:6px;margin-top:6px;font-size:10px;font-weight:750;letter-spacing:1.1px;color:#d8ff72}
+.song.currentSong .listeningStatus{display:flex}
+.song.currentSong.isPaused .listeningStatus{color:#a9b5a9}
+.equalizer{display:flex;height:12px;align-items:flex-end;gap:2px}
+.equalizer i{display:block;width:3px;height:4px;border-radius:2px;background:currentColor}
+.song.isPlaying .equalizer i{animation:hmusicEqualizer .7s ease-in-out infinite alternate}
+.song.isPlaying .equalizer i:nth-child(2){animation-delay:.25s}
+.song.isPlaying .equalizer i:nth-child(3){animation-delay:.47s}
+@keyframes hmusicEqualizer{from{height:3px}to{height:12px}}
+@media(prefers-reduced-motion:reduce){.song.isPlaying .equalizer i{animation:none;height:9px}}

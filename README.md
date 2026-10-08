@@ -1,6 +1,6 @@
-# HMusic V5 — glisser-déposer des morceaux
+# HMusic V6 — morceau en lecture surligné + glisser-déposer
 
-Cette version reprend **HMusic V4** (importation MP3 PC/iPhone, stockage local, favoris, lecture) et ajoute le **tri manuel persistant** des musiques.
+Cette version reprend **HMusic V4** (importation MP3 PC/iPhone, stockage local, favoris, lecture) et conserve le **tri manuel persistant** des musiques. La musique sélectionnée est maintenant **surlignée en vert** dans la bibliothèque, avec un mini-égaliseur animé lorsqu’elle joue et « EN PAUSE » si elle est arrêtée temporairement. La surbrillance suit les boutons précédent/suivant et le changement automatique de piste.
 
 ## Déplacer une musique
 

@@ -1,5 +1,5 @@
-// HMusic V5 — les anciens caches doivent être supprimés après une mise à jour.
-const CACHE = "hmusic-v5-sortable";
+// HMusic V6 — les anciens caches doivent être supprimés après une mise à jour.
+const CACHE = "hmusic-v6-sortable";
 const STATIC = ["./index.html?v=5", "./style.css?v=5", "./app.js?v=5", "./manifest.json?v=5"];
 self.addEventListener("install", event => {
   event.waitUntil((async()=>{

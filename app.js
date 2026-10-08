@@ -1,5 +1,5 @@
 "use strict";
-// HMusic V5 — réorganisation par appui long et stockage local persistant.
+// HMusic V6 — V5 + mise en évidence du morceau en cours de lecture.
 const DB_NAME = "HMusicDB";
 const STORE = "songs";
 const AUDIO_STORE = "audioData";
@@ -129,26 +129,54 @@ function render() {
     const row = document.createElement("div");
     row.className = "song";
     row.dataset.songId = String(s.id);
-    row.innerHTML = `<div class="thumb">♫</div><div class="songInfo"><div class="title">${esc(s.title)}</div><div class="artist">${esc(s.artist||"Artiste inconnu")}</div></div><div class="songActions"><button aria-label="Favori">${s.favorite?"♥":"♡"}</button><button aria-label="Lire">▶</button><button aria-label="Supprimer">⋯</button></div>${reorderEnabled?`<button class="dragHandle" type="button" aria-label="Déplacer ${esc(s.title)}. Maintiens appuyé puis fais glisser" title="Maintenir pour déplacer">☰</button>`:""}`;
+    row.innerHTML = `<div class="thumb">♫</div><div class="songInfo"><div class="title">${esc(s.title)}</div><div class="artist">${esc(s.artist||"Artiste inconnu")}</div><div class="listeningStatus" aria-hidden="true"><span class="equalizer"><i></i><i></i><i></i></span><span class="listeningText">EN LECTURE</span></div></div><div class="songActions"><button aria-label="Favori">${s.favorite?"♥":"♡"}</button><button aria-label="Lire">▶</button><button aria-label="Supprimer">⋯</button></div>${reorderEnabled?`<button class="dragHandle" type="button" aria-label="Déplacer ${esc(s.title)}. Maintiens appuyé puis fais glisser" title="Maintenir pour déplacer">☰</button>`:""}`;
     const btns = row.querySelectorAll("button");
     btns[0].onclick = async () => {
       try { s.favorite = !s.favorite; await updateSong(s); render(); updatePlayer(); }
       catch(e) { setStatus("Favori non enregistré : " + formatError(e),"error"); }
     };
-    btns[1].onclick = () => playSong(s.id);
+    btns[1].onclick = () => {
+      if (songs[currentIndex]?.id === s.id) {
+        if (audio.paused) audio.play().catch(e=>setStatus("Lecture impossible : "+formatError(e),"error"));
+        else audio.pause();
+      } else void playSong(s.id);
+    };
     btns[2].onclick = async () => {
       if (!confirm(`Supprimer « ${s.title} » ?`)) return;
       try {
-        if (songs[currentIndex]?.id === s.id) stopPlayer();
+        const playingId = songs[currentIndex]?.id;
+        if (playingId === s.id) stopPlayer();
         await removeSong(s.id);
         songs = await allSongs();
-        currentIndex = -1;
+        currentIndex = playingId === s.id || playingId === undefined ? -1 : songs.findIndex(song => song.id === playingId);
         render();
       } catch(e) { setStatus("Suppression impossible : " + formatError(e),"error"); }
     };
     if (reorderEnabled) enableLongPressReorder(row);
     library.appendChild(row);
   }
+  syncPlayingRow();
+}
+
+// Met à jour uniquement les lignes, sans recréer la liste : le glisser-déposer n'est pas perturbé.
+function syncPlayingRow() {
+  const playingId = songs[currentIndex]?.id;
+  const isPlaying = !!playingId && !audio.paused && !audio.ended;
+  library.querySelectorAll(".song").forEach(row => {
+    const selected = playingId !== undefined && Number(row.dataset.songId) === playingId;
+    row.classList.toggle("currentSong", selected);
+    row.classList.toggle("isPlaying", selected && isPlaying);
+    row.classList.toggle("isPaused", selected && !isPlaying);
+    if (selected) row.setAttribute("aria-current", "true");
+    else row.removeAttribute("aria-current");
+    const label = row.querySelector(".listeningText");
+    if (label) label.textContent = isPlaying ? "EN LECTURE" : "EN PAUSE";
+    const playButton = row.querySelector('.songActions button[aria-label="Lire"], .songActions button[aria-label="Mettre en pause"]');
+    if (playButton) {
+      playButton.textContent = selected && isPlaying ? "❚❚" : "▶";
+      playButton.setAttribute("aria-label", selected && isPlaying ? "Mettre en pause" : "Lire");
+    }
+  });
 }
 
 // Enregistre l’ordre en une seule transaction pour conserver la bibliothèque intacte.
@@ -333,6 +361,7 @@ function stopPlayer() {
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   objectUrl=null; currentIndex=-1;
   player.classList.add("hidden");
+  syncPlayingRow();
 }
 function updatePlayer() {
   const s=songs[currentIndex]; if (!s) return;
@@ -343,6 +372,7 @@ function updatePlayer() {
   $("fav").textContent=s.favorite?"♥":"♡";
   $("fav").classList.toggle("active",!!s.favorite);
   $("repeat").classList.toggle("active",repeat);
+  syncPlayingRow();
 }
 async function next() {
   if (!songs.length) return;
@@ -422,5 +452,5 @@ const ready=(async()=>{
   catch(e) {console.error("HMusic database error",e);setStatus("Stockage indisponible : "+formatError(e),"error");throw e;}
 })();
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=5", {updateViaCache:"none"}).catch(e=>console.warn("HMusic offline",e)));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=6", {updateViaCache:"none"}).catch(e=>console.warn("HMusic offline",e)));
 }
