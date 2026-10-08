@@ -146,16 +146,8 @@ $("fileInput").onchange=e=>{importFiles([...e.target.files]);e.target.value=""};
 $("play").onclick=async()=>{if(!audio.src && songs.length){await playSong(songs[0].id)}else if(audio.paused){await audio.play()}else audio.pause();updatePlayer()};
 $("next").onclick=next;
 $("prev").onclick=previous;
-$("shuffleBtn").onclick=()=>{shuffle=!shuffle;$("shuffleBtn").textContent=shuffle?"🔀 Aléatoire ✓":"🔀 Aléatoire"};
 $("repeat").onclick=()=>{repeat=!repeat;updatePlayer()};
 $("fav").onclick=async()=>{const s=songs[currentIndex];if(!s)return;s.favorite=!s.favorite;await updateSong(s);updatePlayer();render()};
-$("clearBtn").onclick=async()=>{
-  if(!songs.length)return;
-  if(confirm("Supprimer toute la bibliothèque ?")){
-    const t=db.transaction(STORE,"readwrite");t.objectStore(STORE).clear();
-    t.oncomplete=async()=>{songs=[];currentIndex=-1;stopPlayer();render()};
-  }
-};
 search.oninput=render;
 audio.onplay=updatePlayer;
 audio.onpause=updatePlayer;

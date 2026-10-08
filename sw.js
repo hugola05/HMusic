@@ -1,4 +1,4 @@
-const CACHE="hmusic-v1";
+const CACHE="hmusic-v3-mp3-fix";
 const ASSETS=["./","./index.html","./style.css","./app.js","./manifest.json"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));
 self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
