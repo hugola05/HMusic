@@ -470,5 +470,5 @@ const ready=(async()=>{
   catch(e) {console.error("HMusic database error",e);setStatus("Stockage indisponible : "+formatError(e),"error");throw e;}
 })();
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=7", {updateViaCache:"none"}).catch(e=>console.warn("HMusic offline",e)));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=8", {updateViaCache:"none"}).catch(e=>console.warn("HMusic offline",e)));
 }

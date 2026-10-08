@@ -49,3 +49,10 @@ body.draggingSong{user-select:none;-webkit-user-select:none}
 .songInfo[role="button"]{cursor:pointer;border-radius:6px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(216,255,114,.17)}
 .songInfo[role="button"]:hover .title{text-decoration:underline;text-underline-offset:3px}
 .songInfo[role="button"]:focus-visible{outline:2px solid #d8ff72;outline-offset:4px}
+
+/* V8 : accès externe vers noTube — n’interfère pas avec la bibliothèque locale. */
+.headerActions{display:flex;align-items:center;gap:10px}
+.notubeLink{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 14px;border:1px solid #404d40;border-radius:22px;background:#1c261f;color:#d8ff72;font-size:13px;font-weight:750;text-decoration:none;white-space:nowrap}
+.notubeLink:hover,.notubeLink:focus-visible{border-color:#d8ff72;background:#28392b}
+.notubeLink:active{transform:scale(.97)}
+@media(max-width:350px){.notubeLink{padding:0 9px;font-size:12px}.headerActions{gap:7px}}

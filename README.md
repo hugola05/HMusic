@@ -1,4 +1,4 @@
-# HMusic V7 — cliquer le titre pour lire + surbrillance + glisser-déposer
+# HMusic V8 — cliquer le titre pour lire + surbrillance + glisser-déposer
 
 Cette version reprend **HMusic V4** (importation MP3 PC/iPhone, stockage local, favoris, lecture) et conserve le **tri manuel persistant** des musiques. La musique sélectionnée est maintenant **surlignée en vert** dans la bibliothèque, avec un mini-égaliseur animé lorsqu’elle joue et « EN PAUSE » si elle est arrêtée temporairement. La surbrillance suit les boutons précédent/suivant et le changement automatique de piste.
 
@@ -23,3 +23,9 @@ La poignée fonctionne avec la souris sur PC et avec le doigt sur iPhone. Pour �
 4. Rechargez le site ou fermez et rouvrez l’application installée sur iPhone.
 
 Ne supprimez pas les données du site : elles contiennent vos musiques. Vos MP3 ne sont jamais envoyés sur GitHub. L’ordre sur PC et celui sur iPhone sont enregistrés séparément.
+
+## Accès direct à noTube (V8)
+
+Un bouton **↗ noTube** apparaît à côté du bouton **＋** en haut de HMusic. Il ouvre `https://notube.lol/fr/` dans un nouvel onglet (sur iPhone, généralement dans Safari). Une connexion Internet est nécessaire.
+
+Ce lien ne télécharge et n’importe **aucune** musique automatiquement : utilisez le bouton **＋** pour importer dans HMusic les fichiers MP3 que vous avez le droit d’utiliser. Le lecteur, le stockage local et le glisser-déposer restent inchangés.

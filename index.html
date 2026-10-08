@@ -6,15 +6,18 @@
 <meta name="theme-color" content="#090909">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.json?v=7">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="manifest" href="manifest.json?v=8">
+<link rel="stylesheet" href="style.css?v=8">
 <title>HMusic</title>
 </head>
 <body>
 <div class="app">
 <header class="header">
   <div><div class="logo">H<span>Music</span></div><div class="tag">MUSIQUE LOCALE</div></div>
-  <button id="importBtn" class="add">＋</button><input id="fileInput" type="file" accept=".mp3,.m4a,.aac,.wav,.flac,.ogg,.opus,.aiff,.aif,.mp4" multiple hidden>
+  <div class="headerActions">
+    <a class="notubeLink" href="https://notube.lol/fr/" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir noTube dans le navigateur">↗ noTube</a>
+    <button id="importBtn" class="add" aria-label="Importer des musiques">＋</button>
+  </div><input id="fileInput" type="file" accept=".mp3,.m4a,.aac,.wav,.flac,.ogg,.opus,.aiff,.aif,.mp4" multiple hidden>
 </header>
 
 <main>
@@ -58,7 +61,7 @@
   </div>
 </div>
 <audio id="audio" preload="metadata"></audio>
-<script src="app.js?v=7"></script>
+<script src="app.js?v=8"></script>
 </div>
 </body>
 </html>
