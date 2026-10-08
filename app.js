@@ -1,5 +1,5 @@
 "use strict";
-// HMusic V7 — toucher ou cliquer le titre lance le morceau.
+// HMusic V9 — file d’attente locale + balayage horizontal + tri vertical.
 const DB_NAME = "HMusicDB";
 const STORE = "songs";
 const AUDIO_STORE = "audioData";
@@ -11,6 +11,40 @@ let shuffle = false, repeat = false, activeFilter = "all";
 let objectUrl = null;
 let importing = false;
 let dragging = false;
+const QUEUE_STORAGE_KEY = "HMusicQueueV9";
+let queue = [];
+let loadingSongToken = 0;
+function loadQueue() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(QUEUE_STORAGE_KEY) || "[]");
+    return Array.isArray(saved) ? saved.filter(id => Number.isSafeInteger(id)) : [];
+  } catch (_) { return []; }
+}
+function persistQueue() {
+  try { localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue)); }
+  catch(e) { console.warn("HMusic : file d’attente non persistée", e); }
+}
+function removeFromQueue(id, silent=false) {
+  const pos=queue.indexOf(id);
+  if(pos < 0) return false;
+  queue.splice(pos,1);
+  persistQueue();
+  if (!silent) {render();setStatus("Morceau retiré de la file d’attente.", "success");}
+  return true;
+}
+function addToQueue(id) {
+  const s=songs.find(song=>song.id===id);
+  if(!s) return;
+  if(queue.includes(id)) {setStatus(`« ${s.title} » est déjà dans la file d’attente.`);return;}
+  queue.push(id);
+  persistQueue();
+  render();
+  setStatus(`✓ « ${s.title} » ajouté à la file d’attente (${queue.length}).`, "success");
+}
+function visibleArtist(s) { return s && s.artist && s.artist.trim() !== "Artiste inconnu" ? s.artist : ""; }
+function queueSongs() { const map = new Map(songs.map(s=>[s.id,s])); return queue.map(id=>map.get(id)).filter(Boolean); }
+function refreshQueueCount() { $("queueCount").textContent=String(queue.length); }
+
 const $ = id => document.getElementById(id);
 const audio = $("audio"), library = $("library"), empty = $("empty"), player = $("player"), search = $("search");
 
@@ -117,20 +151,25 @@ function formatTime(value) {
 function esc(v) { return String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function isAudio(file) { return /\.(mp3|m4a|aac|wav|flac|aiff|aif|ogg|opus|mp4)$/i.test(file.name) || file.type.startsWith("audio/"); }
 function render() {
+  const isQueue = activeFilter === "queue";
   const reorderEnabled = activeFilter === "all" && !search.value.trim();
   $("reorderHint").hidden = !reorderEnabled || !songs.length;
+  $("queueHeading").hidden = !isQueue;
+  $("queueEmpty").hidden = !isQueue || !!queue.length;
+  refreshQueueCount();
   const q = search.value.trim().toLowerCase();
-  const filtered = songs.filter(s => (activeFilter === "all" || s.favorite) &&
-    [s.title,s.artist,s.album].join(" ").toLowerCase().includes(q));
+  const source = isQueue ? queueSongs() : songs.filter(s => activeFilter === "all" || s.favorite);
+  const filtered = source.filter(s => [s.title,visibleArtist(s),s.album].join(" ").toLowerCase().includes(q));
   library.innerHTML = "";
-  empty.style.display = filtered.length ? "none" : "block";
-  $("trackCount").textContent = `${songs.length} morceau${songs.length > 1 ? "x" : ""}`;
+  empty.style.display = !isQueue && !filtered.length ? "block" : "none";
+  $("trackCount").textContent = isQueue ? `${queue.length} en attente` : `${songs.length} morceau${songs.length > 1 ? "x" : ""}`;
   for (const s of filtered) {
     const row = document.createElement("div");
     row.className = "song";
     row.dataset.songId = String(s.id);
-    row.innerHTML = `<div class="thumb">♫</div><div class="songInfo"><div class="title">${esc(s.title)}</div><div class="artist">${esc(s.artist||"Artiste inconnu")}</div><div class="listeningStatus" aria-hidden="true"><span class="equalizer"><i></i><i></i><i></i></span><span class="listeningText">EN LECTURE</span></div></div><div class="songActions"><button aria-label="Favori">${s.favorite?"♥":"♡"}</button><button aria-label="Lire">▶</button><button aria-label="Supprimer">⋯</button></div>${reorderEnabled?`<button class="dragHandle" type="button" aria-label="Déplacer ${esc(s.title)}. Maintiens appuyé puis fais glisser" title="Maintenir pour déplacer">☰</button>`:""}`;
-    // Titre accessible au clavier et au toucher : lance la piste sans mettre en pause.
+    const artist=visibleArtist(s);
+    const queued = !isQueue && queue.includes(s.id);
+    row.innerHTML = `<div class="thumb">${isQueue?esc(queue.indexOf(s.id)+1):"♫"}</div><div class="songInfo"><div class="title">${esc(s.title)}</div>${artist?`<div class="artist">${esc(artist)}</div>`:""}${queued?'<div class="queuedBadge">✓ DANS LA FILE</div>':""}<div class="listeningStatus" aria-hidden="true"><span class="equalizer"><i></i><i></i><i></i></span><span class="listeningText">EN LECTURE</span></div></div><div class="songActions"><button aria-label="Favori" type="button">${s.favorite?"♥":"♡"}</button><button aria-label="Lire" type="button">▶</button><button aria-label="${isQueue?"Retirer de la file":"Supprimer"}" type="button">${isQueue?"✕":"⋯"}</button></div>${reorderEnabled?`<button class="dragHandle" type="button" aria-label="Déplacer ${esc(s.title)}. Maintiens appuyé puis fais glisser" title="Maintenir pour déplacer">☰</button>`:""}`;
     const songInfo = row.querySelector(".songInfo");
     songInfo.setAttribute("role", "button");
     songInfo.setAttribute("tabindex", "0");
@@ -148,7 +187,7 @@ function render() {
         startFromTitle();
       }
     });
-    const btns = row.querySelectorAll("button");
+    const btns = row.querySelectorAll(".songActions button");
     btns[0].onclick = async () => {
       try { s.favorite = !s.favorite; await updateSong(s); render(); updatePlayer(); }
       catch(e) { setStatus("Favori non enregistré : " + formatError(e),"error"); }
@@ -160,20 +199,67 @@ function render() {
       } else void playSong(s.id);
     };
     btns[2].onclick = async () => {
+      if (isQueue) { removeFromQueue(s.id); return; }
       if (!confirm(`Supprimer « ${s.title} » ?`)) return;
       try {
         const playingId = songs[currentIndex]?.id;
         if (playingId === s.id) stopPlayer();
         await removeSong(s.id);
+        removeFromQueue(s.id,true);
         songs = await allSongs();
         currentIndex = playingId === s.id || playingId === undefined ? -1 : songs.findIndex(song => song.id === playingId);
         render();
       } catch(e) { setStatus("Suppression impossible : " + formatError(e),"error"); }
     };
     if (reorderEnabled) enableLongPressReorder(row);
+    if (!isQueue) enableSwipeQueue(row, s.id);
     library.appendChild(row);
   }
   syncPlayingRow();
+}
+
+// Balayer la chanson vers la droite : l’ajouter à « File d’attente ».
+// touch-action:pan-y conserve le défilement vertical sur iPhone.
+function enableSwipeQueue(row, id) {
+  let pointerId=null, startX=0, startY=0, dx=0, swiping=false, suppressUntil=0;
+  row.addEventListener("click", event=>{
+    if(Date.now()<suppressUntil) {event.preventDefault();event.stopImmediatePropagation();}
+  }, true);
+  row.addEventListener("pointerdown", e=>{
+    if(e.pointerType==="mouse" && e.button!==0) return;
+    if(e.target.closest("button") || dragging) return;
+    pointerId=e.pointerId;
+    startX=e.clientX; startY=e.clientY; dx=0; swiping=false;
+  });
+  row.addEventListener("pointermove", e=>{
+    if(pointerId!==e.pointerId || dragging) return;
+    const x=e.clientX-startX, y=e.clientY-startY;
+    if(!swiping && (x<14 || Math.abs(x)<Math.abs(y)*1.25)) return;
+    if(!swiping) {
+      swiping=true;
+      try { row.setPointerCapture(pointerId); } catch(_) {}
+    }
+    dx=Math.max(0, Math.min(145,x));
+    row.classList.add("swiping");
+    row.style.setProperty("--swipeX", `${dx}px`);
+    if(dx>80) row.classList.add("swipeReady"); else row.classList.remove("swipeReady");
+    if(e.cancelable) e.preventDefault();
+  }, {passive:false});
+  function finish(e, canceled=false) {
+    if(pointerId!==e.pointerId) return;
+    pointerId=null;
+    if(swiping) {
+      suppressUntil=Date.now()+500;
+      const shouldQueue=!canceled && dx>=80;
+      row.style.setProperty("--swipeX","0px");
+      row.classList.remove("swiping","swipeReady");
+      swiping=false;dx=0;
+      if(shouldQueue) addToQueue(id);
+    }
+  }
+  row.addEventListener("pointerup", e=>finish(e));
+  row.addEventListener("pointercancel", e=>finish(e,true));
+  row.addEventListener("lostpointercapture", e=>{ if (e.target===row) finish(e,true); });
 }
 
 // Met à jour uniquement les lignes, sans recréer la liste : le glisser-déposer n'est pas perturbé.
@@ -319,7 +405,7 @@ async function importFiles(fileList) {
       try {
         if (!f.size) throw new Error("Le fichier est vide ou indisponible.");
         const bytes = await readFile(f);
-        await saveNewSong({ title:cleanName(f.name), artist:"Artiste inconnu", album:"", type:f.type || inferMime(f.name), added:Date.now()+i, favorite:false, size:f.size, order:Math.max(0,...songs.map(songOrder))+1 }, bytes);
+        await saveNewSong({ title:cleanName(f.name), artist:"", album:"", type:f.type || inferMime(f.name), added:Date.now()+i, favorite:false, size:f.size, order:Math.max(0,...songs.map(songOrder))+1 }, bytes);
         ok++;
         // Chaque succès s’affiche immédiatement, sans attendre le lot complet.
         songs = await allSongs();
@@ -385,7 +471,8 @@ function updatePlayer() {
   const s=songs[currentIndex]; if (!s) return;
   player.classList.remove("hidden");
   $("nowTitle").textContent=s.title;
-  $("nowArtist").textContent=s.artist || "Artiste inconnu";
+  $("nowArtist").textContent=visibleArtist(s);
+  $("nowArtist").hidden=!visibleArtist(s);
   $("play").textContent=audio.paused?"▶":"❚❚";
   $("fav").textContent=s.favorite?"♥":"♡";
   $("fav").classList.toggle("active",!!s.favorite);
@@ -394,9 +481,18 @@ function updatePlayer() {
 }
 async function next() {
   if (!songs.length) return;
+  // Priorité à la file, même si la lecture aléatoire est activée.
+  while(queue.length) {
+    const id=queue.shift();
+    persistQueue();
+    render();
+    if(songs.some(s=>s.id===id)) {await playSong(id);return;}
+  }
   let i=currentIndex;
-  if (shuffle) i=songs.length===1?0:Math.floor(Math.random()*songs.length);
-  else i++;
+  if (shuffle) {
+    if(songs.length===1) i=0;
+    else { do {i=Math.floor(Math.random()*songs.length);} while(i===currentIndex); }
+  } else i++;
   if (i>=songs.length) {
     if (repeat) i=0;
     else {audio.pause();updatePlayer();return;}
@@ -433,6 +529,10 @@ function wire() {
     try{s.favorite=!s.favorite;await updateSong(s);updatePlayer();render();}
     catch(e){setStatus("Favori non enregistré : "+formatError(e),"error");}
   };
+  $("clearQueue").onclick=()=>{
+    if(!queue.length) return;
+    queue=[];persistQueue();render();setStatus("✓ File d’attente vidée.","success");
+  };
   search.oninput=render;
   document.querySelectorAll(".tab").forEach(tab=>tab.onclick=()=>{
     activeFilter=tab.dataset.filter;
@@ -459,16 +559,20 @@ function wire() {
       navigator.mediaSession.setActionHandler("nexttrack",next);
       audio.addEventListener("play",()=>{
         const s=songs[currentIndex];if(!s || typeof MediaMetadata==="undefined")return;
-        navigator.mediaSession.metadata=new MediaMetadata({title:s.title,artist:s.artist||"Artiste inconnu",album:s.album||"HMusic"});
+        navigator.mediaSession.metadata=new MediaMetadata({title:s.title,artist:visibleArtist(s),album:s.album||"HMusic"});
       });
     } catch(e) { console.warn("MediaSession non disponible",e); }
   }
 }
 wire();
 const ready=(async()=>{
-  try {await openDB();songs=await allSongs();render();}
+  try {
+    await openDB();songs=await allSongs();
+    queue=loadQueue().filter(id=>songs.some(song=>song.id===id));
+    persistQueue();render();
+  }
   catch(e) {console.error("HMusic database error",e);setStatus("Stockage indisponible : "+formatError(e),"error");throw e;}
 })();
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=8", {updateViaCache:"none"}).catch(e=>console.warn("HMusic offline",e)));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=9", {updateViaCache:"none"}).catch(e=>console.warn("HMusic offline",e)));
 }

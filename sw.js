@@ -1,6 +1,6 @@
-// HMusic V8 — les anciens caches doivent être supprimés après une mise à jour.
-const CACHE = "hmusic-v8-notube-link";
-const STATIC = ["./index.html?v=8", "./style.css?v=8", "./app.js?v=8", "./manifest.json?v=8"];
+// HMusic V9 — les anciens caches doivent être supprimés après une mise à jour.
+const CACHE = "hmusic-v9-file-attente";
+const STATIC = ["./index.html?v=9", "./style.css?v=9", "./app.js?v=9", "./manifest.json?v=9"];
 self.addEventListener("install", event => {
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE);
@@ -30,7 +30,7 @@ self.addEventListener("fetch", event=>{
     } catch(e) {
       const saved=await cache.match(req);
       if(saved) return saved;
-      if(req.mode==="navigate") return await cache.match("./index.html?v=8") || Response.error();
+      if(req.mode==="navigate") return await cache.match("./index.html?v=9") || Response.error();
       return Response.error();
     }
   })());

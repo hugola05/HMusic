@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#090909">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.json?v=8">
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="manifest" href="manifest.json?v=9">
+<link rel="stylesheet" href="style.css?v=9">
 <title>HMusic</title>
 </head>
 <body>
@@ -31,11 +31,13 @@
   <nav class="tabs">
     <button class="tab active" data-filter="all">Tout</button>
     <button class="tab" data-filter="favorite">♥ Favoris</button>
+    <button class="tab queueTab" data-filter="queue">☷ File d’attente <span id="queueCount" class="queueCount">0</span></button>
   </nav>
 
   <div id="importStatus" class="importStatus" role="status" aria-live="polite" hidden></div>
   <p id="trackCount" class="trackCount">0 morceau</p>
-  <p id="reorderHint" class="reorderHint" hidden>☰ Maintiens la poignée d’un morceau, puis glisse-le vers le haut ou le bas pour changer son ordre.</p>
+  <p id="reorderHint" class="reorderHint" hidden>☰ Maintiens la poignée pour réorganiser · Glisse un morceau vers la droite pour l’ajouter à la file d’attente.</p>
+  <div id="queueHeading" class="queueHeading" hidden><div><b>À écouter ensuite</b><small>Les morceaux seront lus dans cet ordre, avant le reste de la bibliothèque.</small></div><button id="clearQueue" type="button">Vider la file</button></div>
 
   <section id="empty" class="empty">
     <div class="emptyDisc">♫</div><h2>Ta bibliothèque est vide</h2>
@@ -43,13 +45,14 @@
     <button id="emptyImport" class="cta">Ajouter des morceaux</button>
   </section>
 
+  <section id="queueEmpty" class="queueEmpty" hidden><div>☷</div><h2>File d’attente vide</h2><p>Depuis « Tout » ou « Favoris », glisse une musique vers la droite pour l’ajouter ici.</p></section>
   <section id="library" class="songs"></section>
 </main>
 
 <div id="player" class="player hidden">
   <div class="playerTop">
     <div id="art" class="art">♫</div>
-    <div class="playing"><b id="nowTitle">—</b><span id="nowArtist">—</span></div>
+    <div class="playing"><b id="nowTitle">—</b><span id="nowArtist" hidden></span></div>
     <button id="fav" class="icon">♡</button>
   </div>
   <input id="progress" type="range" min="0" max="100" value="0">
@@ -61,7 +64,7 @@
   </div>
 </div>
 <audio id="audio" preload="metadata"></audio>
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 </div>
 </body>
 </html>
