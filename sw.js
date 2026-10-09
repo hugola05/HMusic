@@ -1,6 +1,6 @@
 // HMusic V9 — les anciens caches doivent être supprimés après une mise à jour.
-const CACHE = "hmusic-v9-file-attente";
-const STATIC = ["./index.html?v=9", "./style.css?v=9", "./app.js?v=9", "./manifest.json?v=9"];
+const CACHE = "hmusic-v10-tri-file-attente";
+const STATIC = ["./index.html?v=10", "./style.css?v=10", "./app.js?v=10", "./manifest.json?v=10"];
 self.addEventListener("install", event => {
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE);
@@ -30,7 +30,7 @@ self.addEventListener("fetch", event=>{
     } catch(e) {
       const saved=await cache.match(req);
       if(saved) return saved;
-      if(req.mode==="navigate") return await cache.match("./index.html?v=9") || Response.error();
+      if(req.mode==="navigate") return await cache.match("./index.html?v=10") || Response.error();
       return Response.error();
     }
   })());

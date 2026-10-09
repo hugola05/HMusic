@@ -1,11 +1,12 @@
-# HMusic V9 — File d’attente musicale
+# HMusic V10 — Tri de la file d’attente
 
-Nouvelle version construite sur HMusic V8. Compatible avec une publication statique GitHub Pages.
+Nouvelle version construite sur HMusic V9. Compatible avec une publication statique GitHub Pages.
 
 ## Nouveautés
 
 - **Glisser vers la droite** sur une chanson dans « Tout » ou « Favoris » : ajoute le morceau dans la **file d’attente**.
-- Ouvre l’onglet **☷ File d’attente** pour voir l’ordre des morceaux à suivre, retirer un titre ou vider la liste.
+- Ouvre l’onglet **☷ File d’attente** puis maintiens la poignée **☰** à droite d’un titre pour le déplacer vers le haut ou le bas. Le nouvel ordre est enregistré automatiquement.
+- Dans la file, tu peux retirer un titre ou vider la liste. La réorganisation ne change pas l’ordre de ta bibliothèque.
 - Le bouton **Suivant** et la fin automatique d’une chanson consomment **d’abord la file d’attente**, puis reprennent l’ordre habituel (ou la lecture aléatoire si activée).
 - La file est sauvegardée **localement** sur cet appareil, sans compte.
 - Le sous-titre « Artiste inconnu » est masqué, y compris pour les MP3 déjà importés.
@@ -24,7 +25,8 @@ Nouvelle version construite sur HMusic V8. Compatible avec une publication stati
 ## Gestes
 
 - Balayage à droite sur le titre / la vignette : ajouter à la file.
-- Maintenir la poignée ☰ puis monter / descendre : modifier l’ordre de la bibliothèque.
+- Maintenir la poignée ☰ puis monter / descendre dans **Tout** : modifier l’ordre de la bibliothèque.
+- Maintenir la poignée ☰ puis monter / descendre dans **File d’attente** : modifier les prochaines musiques. (Vider le champ de recherche pour déplacer.)
 - Toucher le titre : lire la musique.
 
 **Nota :** Safari peut limiter certaines fonctions de lecture en arrière-plan. Les MP3 ne sont pas envoyés sur GitHub.

@@ -82,3 +82,9 @@ body.draggingSong{user-select:none;-webkit-user-select:none}
 .song .dragHandle{touch-action:none}
 .songActions button[aria-label="Retirer de la file"]{font-size:21px;color:#d8ff72}
 @media(max-width:430px){.song{gap:8px}.songActions button{padding:7px}.dragHandle{width:34px}}
+
+/* V10 : déplacement dans la file d’attente, tout en gardant les gestes V9. */
+.queueHeading small {line-height:1.45}
+.tab[data-filter="queue"].active {border:1px solid #b0e584}
+.song.dragging {touch-action:none;isolation:isolate}
+.dragHandle:focus-visible {outline:2px solid #d8ff72;outline-offset:3px}

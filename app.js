@@ -1,5 +1,5 @@
 "use strict";
-// HMusic V9 — file d’attente locale + balayage horizontal + tri vertical.
+// HMusic V10 — réorganisation de la file d’attente par glisser-déposer.
 const DB_NAME = "HMusicDB";
 const STORE = "songs";
 const AUDIO_STORE = "audioData";
@@ -152,8 +152,11 @@ function esc(v) { return String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<"
 function isAudio(file) { return /\.(mp3|m4a|aac|wav|flac|aiff|aif|ogg|opus|mp4)$/i.test(file.name) || file.type.startsWith("audio/"); }
 function render() {
   const isQueue = activeFilter === "queue";
-  const reorderEnabled = activeFilter === "all" && !search.value.trim();
-  $("reorderHint").hidden = !reorderEnabled || !songs.length;
+  const reorderEnabled = (activeFilter === "all" || isQueue) && !search.value.trim();
+  $("reorderHint").hidden = !reorderEnabled || (isQueue ? queue.length < 2 : !songs.length);
+  $("reorderHint").textContent = isQueue
+    ? "☰ Maintiens la poignée et glisse les morceaux pour choisir leur ordre de lecture."
+    : "☰ Maintiens la poignée pour réorganiser · Glisse un morceau vers la droite pour l’ajouter à la file d’attente.";
   $("queueHeading").hidden = !isQueue;
   $("queueEmpty").hidden = !isQueue || !!queue.length;
   refreshQueueCount();
@@ -169,7 +172,7 @@ function render() {
     row.dataset.songId = String(s.id);
     const artist=visibleArtist(s);
     const queued = !isQueue && queue.includes(s.id);
-    row.innerHTML = `<div class="thumb">${isQueue?esc(queue.indexOf(s.id)+1):"♫"}</div><div class="songInfo"><div class="title">${esc(s.title)}</div>${artist?`<div class="artist">${esc(artist)}</div>`:""}${queued?'<div class="queuedBadge">✓ DANS LA FILE</div>':""}<div class="listeningStatus" aria-hidden="true"><span class="equalizer"><i></i><i></i><i></i></span><span class="listeningText">EN LECTURE</span></div></div><div class="songActions"><button aria-label="Favori" type="button">${s.favorite?"♥":"♡"}</button><button aria-label="Lire" type="button">▶</button><button aria-label="${isQueue?"Retirer de la file":"Supprimer"}" type="button">${isQueue?"✕":"⋯"}</button></div>${reorderEnabled?`<button class="dragHandle" type="button" aria-label="Déplacer ${esc(s.title)}. Maintiens appuyé puis fais glisser" title="Maintenir pour déplacer">☰</button>`:""}`;
+    row.innerHTML = `<div class="thumb">${isQueue?esc(queue.indexOf(s.id)+1):"♫"}</div><div class="songInfo"><div class="title">${esc(s.title)}</div>${artist?`<div class="artist">${esc(artist)}</div>`:""}${queued?'<div class="queuedBadge">✓ DANS LA FILE</div>':""}<div class="listeningStatus" aria-hidden="true"><span class="equalizer"><i></i><i></i><i></i></span><span class="listeningText">EN LECTURE</span></div></div><div class="songActions"><button aria-label="Favori" type="button">${s.favorite?"♥":"♡"}</button><button aria-label="Lire" type="button">▶</button><button aria-label="${isQueue?"Retirer de la file":"Supprimer"}" type="button">${isQueue?"✕":"⋯"}</button></div>${reorderEnabled && (!isQueue || queue.length>1)?`<button class="dragHandle" type="button" aria-label="Déplacer ${esc(s.title)}. Maintiens appuyé puis fais glisser" title="Maintenir pour déplacer">☰</button>`:""}`;
     const songInfo = row.querySelector(".songInfo");
     songInfo.setAttribute("role", "button");
     songInfo.setAttribute("tabindex", "0");
@@ -299,6 +302,20 @@ function saveSongOrder(orderedSongs) {
 
 async function applyReorder() {
   const ids = Array.from(library.querySelectorAll(".song"), el => Number(el.dataset.songId));
+  // La file d’attente a son propre ordre, indépendamment de celui des titres.
+  // L’enregistrement se fait dans la même clé localStorage que la V9.
+  if (activeFilter === "queue") {
+    if (search.value.trim() || ids.length !== queue.length ||
+        new Set(ids).size !== queue.length ||
+        ids.some(id => !queue.includes(id))) { render(); return; }
+    if (ids.every((id, i) => id === queue[i])) return;
+    queue = ids;
+    persistQueue();
+    render();
+    setStatus("✓ Nouvel ordre de la file d’attente enregistré !", "success");
+    return;
+  }
+  if (activeFilter !== "all" || search.value.trim()) { render(); return; }
   if (ids.length !== songs.length) return;
   const before = songs.map(song => song.id);
   if (ids.every((id,i) => id === before[i])) return;
@@ -574,5 +591,5 @@ const ready=(async()=>{
   catch(e) {console.error("HMusic database error",e);setStatus("Stockage indisponible : "+formatError(e),"error");throw e;}
 })();
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=9", {updateViaCache:"none"}).catch(e=>console.warn("HMusic offline",e)));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=10", {updateViaCache:"none"}).catch(e=>console.warn("HMusic offline",e)));
 }
